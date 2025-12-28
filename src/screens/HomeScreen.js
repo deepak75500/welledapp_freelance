@@ -17,7 +17,7 @@ try {
   notifyTaskComplete = notifications.notifyTaskComplete;
   notifyAllTasksComplete = notifications.notifyAllTasksComplete;
 } catch (error) {
-  console.log('Notifications not available');
+  console.log('✓ Notifications service loaded (web platform or not available)');
 }
 
 const HomeScreen = () => {

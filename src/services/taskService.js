@@ -41,8 +41,13 @@ export const markAllTasksCompleted = async () => {
     const response = await api.post('/tasks/complete');
     
     if (response.data.success) {
-      console.log('✅ All tasks marked complete! Streak:', response.data.streak);
-      return { success: true, streak: response.data.streak };
+      console.log('✅ All tasks marked complete! Streak:', response.data.streak, 'Best:', response.data.longestStreak);
+      return { 
+        success: true, 
+        streak: response.data.streak,
+        longestStreak: response.data.longestStreak,
+        message: response.data.message
+      };
     }
     return { success: false };
   } catch (error) {
