@@ -30,8 +30,9 @@ export default function TaskCard({ task, onToggle }) {
         styles.card,
         task.completed && styles.cardCompleted
       ]}
-      onPress={onToggle}
+      onPress={!task.completed ? onToggle : undefined}
       activeOpacity={0.8}
+      disabled={task.completed}
     >
       {/* Small Category Image on Left */}
       <View style={styles.imageContainer}>

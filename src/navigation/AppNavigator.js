@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import DrawerNavigator from './DrawerNavigator';
@@ -10,7 +10,14 @@ import { ActivityIndicator, View, StyleSheet } from 'react-native';
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
-  const { user, loading } = useContext(AuthContext);
+  const { user, loading, setNavigationRef } = useContext(AuthContext);
+  const navigationRef = React.useRef();
+
+  useEffect(() => {
+    if (setNavigationRef && navigationRef.current) {
+      setNavigationRef(navigationRef.current);
+    }
+  }, [setNavigationRef]);
 
   if (loading) {
     return (
@@ -21,7 +28,7 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       {user ? (
         <DrawerNavigator />
       ) : (

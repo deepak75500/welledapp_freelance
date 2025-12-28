@@ -4,15 +4,12 @@ export const getDailyTasks = async () => {
   try {
     console.log('📋 Fetching daily tasks...');
     const response = await api.get('/tasks/daily');
-
+    
     if (response.data.success) {
       console.log('✅ Tasks received:', response.data.tasks.length, 'tasks');
-      return {
-        tasks: response.data.tasks || [],
-        allCompleted: !!response.data.allCompleted
-      };
+      return response.data.tasks;
     }
-    return { tasks: [], allCompleted: false };
+    return [];
   } catch (error) {
     console.error('❌ Error fetching tasks:', error.response?.data || error.message);
     throw error;

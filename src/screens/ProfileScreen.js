@@ -1,37 +1,31 @@
 import React, { useContext } from 'react';
 import { 
-  View, Text, StyleSheet, TouchableOpacity, ScrollView
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProfileScreen = () => {
-  const { user } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
 
-  const handleLogout = async () => {
-    const confirmed = window.confirm('Are you sure you want to logout?');
-    
-    if (!confirmed) return;
-    
-    try {
-      console.log('🚪 Logging out...');
-      
-      // Clear all storage
-      await AsyncStorage.clear();
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      console.log('✅ Storage cleared');
-      
-      // Redirect to login
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 100);
-      
-    } catch (error) {
-      console.error('Logout error:', error);
-      window.location.href = '/';
-    }
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          onPress: () => console.log('Logout cancelled'),
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          onPress: async () => {
+            await logout();
+          },
+          style: 'destructive',
+        },
+      ]
+    );
   };
 
   if (!user) {
@@ -72,10 +66,15 @@ const ProfileScreen = () => {
         </View>
       </View>
 
-     <TouchableOpacity onPress={() => logout(navigation)}>
-      <Text>Logout</Text>
-    </TouchableOpacity>
-
+      <View style={styles.logoutButtonContainer}>
+        <TouchableOpacity 
+          style={styles.logoutButton} 
+          onPress={handleLogout}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.logoutText}>🚪 Logout</Text>
+        </TouchableOpacity>
+      </View>
      
     </ScrollView>
   );
@@ -167,12 +166,15 @@ const styles = StyleSheet.create({
     fontSize: 14, 
     color: '#666' 
   },
+  logoutButtonContainer: {
+    marginBottom: 20,
+    paddingHorizontal: 16,
+  },
   logoutButton: { 
     backgroundColor: '#f44336', 
     padding: 18, 
     borderRadius: 12, 
-    alignItems: 'center', 
-    margin: 16,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,

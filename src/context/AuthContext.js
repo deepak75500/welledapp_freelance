@@ -1,13 +1,14 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getCurrentUser } from '../services/authService';
 import { CommonActions } from '@react-navigation/native';
 
 export const AuthContext = createContext();
 
-export const AuthProvider = ({ children, navigation }) => {
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigationRef = useRef(null);
 
   useEffect(() => {
     checkAuthState();
@@ -34,26 +35,27 @@ export const AuthProvider = ({ children, navigation }) => {
 
   const logout = async () => {
     try {
+      console.log('🚪 Logging out...');
       await AsyncStorage.clear();
       setUser(null);
+      console.log('✅ Logout successful');
 
       // Reset navigation stack to Login after logout
-      if (navigation) {
-        navigation.dispatch(
+      if (navigationRef.current) {
+        navigationRef.current.dispatch(
           CommonActions.reset({
             index: 0,
             routes: [{ name: 'Login' }],
           })
         );
       }
-
-      // For Web: optional page reload
-      if (typeof window !== 'undefined') {
-        window.location.href = '/';
-      }
     } catch (error) {
       console.error('Logout error:', error);
     }
+  };
+
+  const setNavigationRef = (ref) => {
+    navigationRef.current = ref;
   };
 
   const refreshUser = async () => {
@@ -68,7 +70,7 @@ export const AuthProvider = ({ children, navigation }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, refreshUser }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, refreshUser, setNavigationRef }}>
       {children}
     </AuthContext.Provider>
   );

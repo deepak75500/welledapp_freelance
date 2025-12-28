@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { 
   View, Text, ScrollView, StyleSheet, TouchableOpacity, 
-  ActivityIndicator 
+  ActivityIndicator
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthContext } from '../context/AuthContext';
 import { getDailyTasks, updateTaskCompletion, markAllTasksCompleted } from '../services/taskService';
 import TaskCard from '../components/TaskCard';
@@ -20,26 +21,52 @@ try {
 }
 
 const HomeScreen = () => {
-  const { user } = useContext(AuthContext);
+  const { user, login } = useContext(AuthContext);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [allCompleted, setAllCompleted] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [serverMarkedComplete, setServerMarkedComplete] = useState(false);
+  const autoMarkedRef = React.useRef(false);
 
   useEffect(() => {
     if (user) {
-      loadTasks();
+      checkDateAndLoadTasks();
+      // Check every minute if day has changed
+      const interval = setInterval(checkDateAndLoadTasks, 60000);
+      return () => clearInterval(interval);
     }
   }, [user]);
 
+  const checkDateAndLoadTasks = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const lastDate = await AsyncStorage.getItem('lastTaskDate');
+      
+      // If day has changed, clear cached tasks and load new ones
+      if (lastDate && lastDate !== today) {
+        console.log('📅 New day detected! Auto-loading new random tasks...');
+      }
+      
+      // Save today's date
+      await AsyncStorage.setItem('lastTaskDate', today);
+      
+      loadTasks();
+    } catch (error) {
+      console.error('Error checking date:', error);
+      loadTasks();
+    }
+  };
+
   const loadTasks = async () => {
     try {
-      const dailyTasks = await getDailyTasks();
+      const { tasks: dailyTasks, allCompleted } = await getDailyTasks();
       setTasks(dailyTasks);
-      
+
       const completed = dailyTasks.every(task => task.completed);
       setAllCompleted(completed);
+      setServerMarkedComplete(!!allCompleted);
     } catch (error) {
       console.error('❌ Error loading tasks:', error);
       setErrorMessage('Failed to load tasks. Please refresh.');
@@ -48,6 +75,21 @@ const HomeScreen = () => {
       setLoading(false);
     }
   };
+
+  // Auto-mark complete on server when user finishes all tasks locally
+  useEffect(() => {
+    if (allCompleted && !serverMarkedComplete && !autoMarkedRef.current) {
+      autoMarkedRef.current = true;
+      // call markAllCompleted in background
+      (async () => {
+        try {
+          await handleMarkAllCompleted();
+        } catch (e) {
+          console.error('Auto mark complete failed', e);
+        }
+      })();
+    }
+  }, [allCompleted, serverMarkedComplete]);
 
   const handleTaskToggle = async (taskId, completed) => {
     try {
@@ -103,10 +145,19 @@ const HomeScreen = () => {
       }
       
       // Reload after showing message
-      setTimeout(() => {
+      setTimeout(async () => {
         setSuccessMessage('');
-        // Reload app to show updated streak
-        window.location.reload();
+        // Update AuthContext user so UI reflects new streak immediately
+        try {
+          await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+          if (login) login(updatedUser);
+        } catch (e) {
+          console.error('Error updating local user after streak update', e);
+        }
+        // Reload tasks to reflect any changes
+        setTimeout(() => {
+          loadTasks();
+        }, 300);
       }, 3000);
     } else {
       setErrorMessage(result?.error || result?.message || 'Unable to update streak');
@@ -200,25 +251,31 @@ const HomeScreen = () => {
           ))
         )}
 
-        <TouchableOpacity 
-          style={[
-            styles.completeButton,
-            !allCompleted && styles.completeButtonDisabled
-          ]}
-          onPress={handleMarkAllCompleted}
-          disabled={!allCompleted}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.completeButtonText}>
-            {allCompleted ? '✓ Mark All Tasks Completed' : 'Complete All Tasks First'}
-          </Text>
-        </TouchableOpacity>
+        {allCompleted ? (
+          <View style={styles.allDoneContainer}>
+            <Text style={styles.allDoneText}> All tasks completed today 🎉</Text>
+          </View>
+        ) : (
+          <TouchableOpacity 
+            style={[
+              styles.completeButton,
+              !allCompleted && styles.completeButtonDisabled
+            ]}
+            onPress={handleMarkAllCompleted}
+            disabled={!allCompleted}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.completeButtonText}>
+              Complete All Tasks First
+            </Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.motivationCard}>
           <Text style={styles.motivationEmoji}>💪</Text>
           <Text style={styles.motivationText}>
             {allCompleted 
-              ? "Great job! Click the button above to complete today's wellness goals!"
+              ? "I'm waiting how you do tomorrow's tasks! Keep the streak going! 💚"
               : `${totalCount - completedCount} task${totalCount - completedCount === 1 ? '' : 's'} remaining. You've got this!`
             }
           </Text>
@@ -409,6 +466,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#e65100',
     lineHeight: 20,
+  },
+  allDoneContainer: {
+    backgroundColor: '#e6ffe6',
+    padding: 18,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#a6f3a6'
+  },
+  allDoneText: {
+    color: '#2e7d32',
+    fontSize: 16,
+    fontWeight: '600'
   },
 });
 
