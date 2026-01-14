@@ -17,42 +17,33 @@ export const AuthProvider = ({ children }) => {
   const checkAuthState = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
-      if (token) {
-        const userData = await getCurrentUser();
-        setUser(userData);
+      const storedUser = await AsyncStorage.getItem('user');
+
+      if (token && storedUser) {
+        setUser(JSON.parse(storedUser));
+      } else {
+        setUser(null);
       }
     } catch (error) {
       console.error('Auth state check error:', error);
+      setUser(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const login = async (userData) => {
+  const login = async (userData, token) => {
+    await AsyncStorage.multiSet([
+      ['token', token],
+      ['user', JSON.stringify(userData)],
+    ]);
     setUser(userData);
-    await AsyncStorage.setItem('user', JSON.stringify(userData));
   };
 
   const logout = async () => {
-    try {
-      console.log('🚪 Logging out...');
-      await AsyncStorage.clear();
-      setUser(null);
-      console.log('✅ Logout successful');
-
-      // Reset navigation stack to Login after logout
-      if (navigationRef.current) {
-        navigationRef.current.dispatch(
-          CommonActions.reset({
-            index: 0,
-            routes: [{ name: 'Login' }],
-          })
-        );
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
+  await AsyncStorage.multiRemove(['token', 'user']);
+  setUser(null);
+};
 
   const setNavigationRef = (ref) => {
     navigationRef.current = ref;
@@ -61,16 +52,26 @@ export const AuthProvider = ({ children }) => {
   const refreshUser = async () => {
     try {
       const userData = await getCurrentUser();
+      await AsyncStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
       return userData;
     } catch (error) {
       console.error('Error refreshing user:', error);
-      return user;
+      return null;
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, refreshUser, setNavigationRef }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        logout,
+        refreshUser,
+        setNavigationRef,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "WellEd",
-    "slug": "welled-app",
+    "slug": "welledapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/logo.png",
@@ -46,9 +46,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "f7b1a05e-9e45-4eac-b4cf-b252392d259f"
+        "projectId": "6d2827f8-6084-4f74-8a96-02c79d617530"
       }
     },
-    "owner": "sk_kyra"
+    "owner": "deepak162"
   }
 }
